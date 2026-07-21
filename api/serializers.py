@@ -4,7 +4,6 @@ Serializers for Customer Management API.
 Serializers define how Django models are converted to/from JSON representations
 for API requests and responses.
 """
-import logging
 from rest_framework import serializers
 
 from api.models import Customer, Address, Document, PhoneNumber
@@ -23,9 +22,6 @@ from api.exceptions import (
     DuplicateNationalIDError,
     InvalidInputError,
 )
-
-logger = logging.getLogger(__name__)
-
 
 class PhoneNumberSerializer(serializers.ModelSerializer):
     """
@@ -72,7 +68,6 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
             validate_phone_number(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid phone number: {value}")
             raise serializers.ValidationError(str(e.detail))
     
     def validate_phone_type(self, value):
@@ -90,7 +85,6 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
         """
         valid_types = [choice[0] for choice in PhoneNumber.PhoneType.choices]
         if value not in valid_types:
-            logger.warning(f"Invalid phone type: {value}")
             raise serializers.ValidationError(
                 f"Invalid phone type. Must be one of: {', '.join(valid_types)}"
             )
@@ -163,7 +157,6 @@ class AddressSerializer(serializers.ModelSerializer):
             validate_address_line(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid address line: {value}")
             raise serializers.ValidationError(str(e.detail))
     
     def validate_postal_code(self, value):
@@ -183,7 +176,6 @@ class AddressSerializer(serializers.ModelSerializer):
             validate_postal_code(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid postal code: {value}")
             raise serializers.ValidationError(str(e.detail))
     
     def validate_address_type(self, value):
@@ -201,7 +193,6 @@ class AddressSerializer(serializers.ModelSerializer):
         """
         valid_types = [choice[0] for choice in Address.AddressType.choices]
         if value not in valid_types:
-            logger.warning(f"Invalid address type: {value}")
             raise serializers.ValidationError(
                 f"Invalid address type. Must be one of: {', '.join(valid_types)}"
             )
@@ -226,7 +217,6 @@ class AddressSerializer(serializers.ModelSerializer):
                 "City name must be at least 2 characters."
             )
         if len(value) > 100:
-            logger.warning(f"City name too long: {value}")
             raise serializers.ValidationError(
                 "City name cannot exceed 100 characters."
             )
@@ -251,7 +241,6 @@ class AddressSerializer(serializers.ModelSerializer):
                 "District name must be at least 2 characters."
             )
         if len(value) > 100:
-            logger.warning(f"District name too long: {value}")
             raise serializers.ValidationError(
                 "District name cannot exceed 100 characters."
             )
@@ -310,7 +299,6 @@ class DocumentSerializer(serializers.ModelSerializer):
             validate_file_upload(value)
             return value
         except Exception as e:
-            logger.warning(f"File validation failed: {str(e)}")
             raise serializers.ValidationError(str(e.detail) if hasattr(e, 'detail') else str(e))
     
     def validate_document_type(self, value):
@@ -328,7 +316,6 @@ class DocumentSerializer(serializers.ModelSerializer):
         """
         valid_types = [choice[0] for choice in Document.DocumentType.choices]
         if value not in valid_types:
-            logger.warning(f"Invalid document type: {value}")
             raise serializers.ValidationError(
                 f"Invalid document type. Must be one of: {', '.join(valid_types)}"
             )
@@ -426,7 +413,6 @@ class CustomerSerializer(serializers.ModelSerializer):
             validate_customer_name(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid customer name: {value}")
             raise serializers.ValidationError(str(e.detail))
     
     def validate_email(self, value):
@@ -446,7 +432,6 @@ class CustomerSerializer(serializers.ModelSerializer):
             validate_email(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid email format: {value}")
             raise serializers.ValidationError(str(e.detail))
     
     def validate_date_of_birth(self, value):
@@ -467,8 +452,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             return value
         except Exception as e:
             logger.warning(f"Invalid date of birth: {value}")
-            raise serializers.ValidationError(str(e.detail) if hasattr(e, 'detail') else str(e))
-    
+            
     def validate_national_id_number(self, value):
         """
         Validate national ID format.
@@ -487,4 +471,4 @@ class CustomerSerializer(serializers.ModelSerializer):
             return value
         except InvalidInputError as e:
             logger.warning(f"Invalid national ID: {value}")
-            raise serializers.ValidationError(str(e.detail))
+            

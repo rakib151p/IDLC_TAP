@@ -4,7 +4,6 @@ API Views for Customer Management System
 This module contains API endpoints for managing customers and their related data
 including phone numbers, addresses, and documents.
 """
-import logging
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -23,8 +22,6 @@ from api.exceptions import (
 	DuplicateNationalIDError,
 	DatabaseError,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class CustomerPagination(pagination.PageNumberPagination):
@@ -189,9 +186,6 @@ class CustomerCreateAPIView(generics.CreateAPIView):
 		try:
 			serializer.save()
 		except IntegrityError as e:
-			error_message = str(e)
-			logger.warning(f"Integrity error while creating customer: {error_message}")
-			
 			if "email" in error_message.lower():
 				raise DuplicateEmailError()
 			elif "national_id" in error_message.lower():
@@ -199,7 +193,6 @@ class CustomerCreateAPIView(generics.CreateAPIView):
 			else:
 				raise DatabaseError(detail="Failed to create customer. Duplicate data detected.")
 		except Exception as e:
-			logger.error(f"Error creating customer: {str(e)}", exc_info=True)
 			raise DatabaseError(detail="Failed to create customer. Please try again later.")
 
 
@@ -308,8 +301,6 @@ class CustomerUpdateAPIView(generics.UpdateAPIView):
 		try:
 			serializer.save()
 		except IntegrityError as e:
-			error_message = str(e)
-			logger.warning(f"Integrity error while updating customer: {error_message}")
 			
 			if "email" in error_message.lower():
 				raise DuplicateEmailError()
@@ -318,7 +309,6 @@ class CustomerUpdateAPIView(generics.UpdateAPIView):
 			else:
 				raise DatabaseError(detail="Failed to update customer. Duplicate data detected.")
 		except Exception as e:
-			logger.error(f"Error updating customer: {str(e)}", exc_info=True)
 			raise DatabaseError(detail="Failed to update customer. Please try again later.")
 
 
@@ -377,7 +367,6 @@ class CustomerRelatedQuerysetMixin:
 		try:
 			return get_object_or_404(Customer, pk=self.kwargs[self.customer_lookup_url_kwarg])
 		except Exception as e:
-			logger.warning(f"Error retrieving customer: {str(e)}")
 			raise
 
 	def filter_by_customer(self, queryset):
@@ -405,10 +394,8 @@ class CustomerRelatedQuerysetMixin:
 		try:
 			serializer.save(customer=self.get_customer())
 		except IntegrityError as e:
-			logger.warning(f"Integrity error while creating related object: {str(e)}")
 			raise DatabaseError(detail="Failed to create resource. Please check your data.")
 		except Exception as e:
-			logger.error(f"Error creating related object: {str(e)}", exc_info=True)
 			raise DatabaseError(detail="Failed to create resource. Please try again later.")
 
 	def get_queryset(self):

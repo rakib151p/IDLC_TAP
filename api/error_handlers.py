@@ -4,14 +4,11 @@ Error handlers and middleware for API exception handling.
 This module provides centralized error handling and custom exception handlers
 for the REST API.
 """
-import logging
 from django.db import IntegrityError, OperationalError, DatabaseError
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import APIException
-
-logger = logging.getLogger(__name__)
 
 
 class APIExceptionHandler:
@@ -49,8 +46,6 @@ class APIExceptionHandler:
             detail = {
                 "detail": "A resource with these values already exists."
             }
-        
-        logger.warning(f"Integrity error: {error_message}")
         return Response(detail, status=status.HTTP_400_BAD_REQUEST)
     
     @staticmethod
@@ -65,7 +60,6 @@ class APIExceptionHandler:
         Returns:
             Response: JSON response with 503 status
         """
-        logger.error(f"Database error: {str(exc)}", exc_info=True)
         return Response(
             {"detail": "Database operation failed. Please try again later."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -83,7 +77,6 @@ class APIExceptionHandler:
         Returns:
             Response: JSON response with 503 status
         """
-        logger.error(f"Database operational error: {str(exc)}", exc_info=True)
         return Response(
             {"detail": "Database service unavailable. Please try again later."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -108,7 +101,6 @@ class APIExceptionHandler:
         else:
             detail = {"detail": str(exc)}
         
-        logger.warning(f"Validation error: {detail}")
         return Response(detail, status=status.HTTP_400_BAD_REQUEST)
     
     @staticmethod
@@ -123,7 +115,6 @@ class APIExceptionHandler:
         Returns:
             Response: JSON response with 404 status
         """
-        logger.warning(f"Object not found: {str(exc)}")
         return Response(
             {"detail": "The requested resource was not found."},
             status=status.HTTP_404_NOT_FOUND
@@ -141,9 +132,6 @@ class APIExceptionHandler:
         Returns:
             Response: JSON response with 500 status
         """
-        error_type = type(exc).__name__
-        logger.error(f"File operation error ({error_type}): {str(exc)}", exc_info=True)
-        
         if "PermissionError" in error_type:
             return Response(
                 {"detail": "Permission denied for file operation."},
@@ -172,15 +160,6 @@ class APIExceptionHandler:
         Returns:
             Response: JSON response with 500 status
         """
-        error_type = type(exc).__name__
-        logger.error(
-            f"Unexpected error ({error_type}): {str(exc)}",
-            exc_info=True,
-            extra={
-                "request_method": context.get("request").method if context.get("request") else None,
-                "request_path": context.get("request").path if context.get("request") else None,
-            }
-        )
         return Response(
             {"detail": "An unexpected error occurred. Please try again later."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

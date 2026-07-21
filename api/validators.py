@@ -3,7 +3,6 @@ Custom validators for API serializers.
 
 This module provides validation functions for common data types and formats.
 """
-import logging
 from datetime import datetime
 from django.core.exceptions import ValidationError
 from api.exceptions import (
@@ -12,8 +11,6 @@ from api.exceptions import (
     FileTooLargeError,
     InvalidFileTypeError,
 )
-
-logger = logging.getLogger(__name__)
 
 # File upload constraints
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -65,12 +62,10 @@ def validate_date_of_birth(value):
             )
             
     except ValueError as e:
-        logger.warning(f"Invalid date format provided: {value}")
         raise InvalidDateFormatError(
             detail="Invalid date format. Use YYYY-MM-DD format."
         )
     except TypeError as e:
-        logger.warning(f"Invalid date type: {type(value)}")
         raise InvalidInputError(
             detail="Date must be provided in YYYY-MM-DD format."
         )
@@ -121,7 +116,6 @@ def validate_national_id(value):
         )
     
     if len(value) > 50:
-        logger.warning(f"National ID exceeds max length: {len(value)}")
         raise InvalidInputError(
             detail="National ID cannot exceed 50 characters."
         )
@@ -129,7 +123,6 @@ def validate_national_id(value):
     # Remove whitespace and check if it contains only alphanumeric
     clean_id = value.strip()
     if not clean_id.replace(" ", "").isalnum():
-        logger.warning(f"National ID contains invalid characters: {value}")
         raise InvalidInputError(
             detail="National ID can only contain letters, numbers, and spaces."
         )
@@ -165,14 +158,12 @@ def validate_phone_number(value):
     
     # Cannot exceed 20 characters
     if len(clean_number) > 20:
-        logger.warning(f"Phone number exceeds max length: {value}")
         raise InvalidInputError(
             detail="Phone number cannot exceed 20 characters."
         )
     
     # Must start with + or digit
     if not (clean_number[0] in ['+', '0'] or clean_number[0].isdigit()):
-        logger.warning(f"Phone number has invalid format: {value}")
         raise InvalidInputError(
             detail="Phone number must start with + or a digit."
         )
@@ -197,13 +188,11 @@ def validate_postal_code(value):
     
     clean_code = value.strip()
     if len(clean_code) < 3:
-        logger.warning(f"Postal code too short: {value}")
         raise InvalidInputError(
             detail="Postal code must be at least 3 characters."
         )
     
     if len(clean_code) > 20:
-        logger.warning(f"Postal code too long: {value}")
         raise InvalidInputError(
             detail="Postal code cannot exceed 20 characters."
         )
@@ -232,9 +221,6 @@ def validate_file_upload(file_obj):
     try:
         # Check file size
         if file_obj.size > MAX_FILE_SIZE:
-            logger.warning(
-                f"File too large: {file_obj.name} ({file_obj.size} bytes)"
-            )
             raise FileTooLargeError(
                 detail=f"File size exceeds maximum allowed size (10MB). "
                        f"Your file is {file_obj.size / (1024*1024):.2f}MB."
@@ -246,9 +232,6 @@ def validate_file_upload(file_obj):
             file_extension = filename.split('.')[-1] if '.' in filename else ''
             
             if file_extension not in ALLOWED_FILE_EXTENSIONS:
-                logger.warning(
-                    f"Invalid file type: {filename} (ext: {file_extension})"
-                )
                 raise InvalidFileTypeError(
                     detail=f"File type '.{file_extension}' not allowed. "
                            f"Allowed types: {', '.join(ALLOWED_FILE_EXTENSIONS)}"
@@ -257,15 +240,11 @@ def validate_file_upload(file_obj):
         # Check MIME type if available
         if hasattr(file_obj, 'content_type') and file_obj.content_type:
             if file_obj.content_type not in ALLOWED_MIME_TYPES:
-                logger.warning(
-                    f"Invalid MIME type: {file_obj.content_type} "
-                    f"for file: {file_obj.name}"
-                )
                 # Note: Don't strictly enforce MIME type as it can vary
-                # Just log the warning
+                # Just skip validation
+                pass
         
     except (AttributeError, TypeError) as e:
-        logger.error(f"Error validating file: {str(e)}")
         raise InvalidInputError(detail="Invalid file object provided.")
 
 
@@ -288,13 +267,11 @@ def validate_address_line(value):
     
     clean_address = value.strip()
     if len(clean_address) < 5:
-        logger.warning(f"Address too short: {value}")
         raise InvalidInputError(
             detail="Address must be at least 5 characters."
         )
     
     if len(clean_address) > 500:
-        logger.warning(f"Address too long: {value}")
         raise InvalidInputError(
             detail="Address cannot exceed 500 characters."
         )
@@ -319,13 +296,11 @@ def validate_customer_name(value):
     
     clean_name = value.strip()
     if len(clean_name) < 2:
-        logger.warning(f"Name too short: {value}")
         raise InvalidInputError(
             detail="Customer name must be at least 2 characters."
         )
     
     if len(clean_name) > 255:
-        logger.warning(f"Name too long: {value}")
         raise InvalidInputError(
             detail="Customer name cannot exceed 255 characters."
         )
@@ -333,7 +308,6 @@ def validate_customer_name(value):
     # Check for valid characters (letters, spaces, hyphens, apostrophes)
     import re
     if not re.match(r"^[a-zA-Z\s\-']*$", clean_name):
-        logger.warning(f"Name contains invalid characters: {value}")
         raise InvalidInputError(
             detail="Customer name can only contain letters, spaces, hyphens, and apostrophes."
         )
