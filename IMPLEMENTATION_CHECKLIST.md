@@ -116,22 +116,6 @@ Created to exclude:
 - **Type**: NID, TAX_CERTIFICATE, PHOTO, SIGNATURE
 - **File**: Max 10MB, allowed extensions (PDF, JPG, PNG, GIF, DOC, DOCX, TXT)
 
-## Logging Configuration
-
-### Log Files
-- `logs/api.log` - All API operations (DEBUG+)
-- `logs/errors.log` - Errors only (ERROR)
-- Console output - Terminal/Docker logs
-
-### Log Rotation
-- Max file size: 10MB
-- Backup count: 5 files
-- Total max logs: ~50MB
-
-### Log Format
-- **Verbose**: `{levelname} {asctime} {module} {process:d} {thread:d} {message}`
-- **Simple**: `{levelname} {asctime} {module} {message}`
-
 ## Testing Checklist
 
 ### Before Commit
@@ -145,8 +129,6 @@ Created to exclude:
 - [ ] Test invalid phone number: Should return 400 Bad Request
 - [ ] Test missing required field: Should return 400 Bad Request
 - [ ] Test invalid customer ID: Should return 404 Not Found
-- [ ] Check logs are being written to `logs/api.log`
-- [ ] Check errors are logged to `logs/errors.log`
 
 ### Test Commands
 
@@ -189,7 +171,6 @@ curl -X POST http://localhost:8000/api/customers/1/phone-numbers/ \
 
 ### Settings.py
 - REST_FRAMEWORK['EXCEPTION_HANDLER'] configured
-- LOGGING configured with file handlers
 - Media directory configured
 
 ### URL Routing
@@ -222,45 +203,3 @@ curl -X POST http://localhost:8000/api/customers/1/phone-numbers/ \
 - [ ] API key management
 - [ ] Advanced audit logging
 - [ ] Metrics and monitoring integration (Prometheus, etc.)
-
-## Commit Message
-
-```
-feat: add comprehensive error handling and validation
-
-- Create custom exception classes for API-specific errors
-- Add field-level validators for all models
-- Implement centralized exception handler with proper HTTP status codes
-- Add file upload validation (size and type)
-- Configure logging with file rotation and error tracking
-- Update serializers with validation methods
-- Update views with try-except blocks for database operations
-- Add REST Framework exception handler configuration
-- Create comprehensive error handling documentation
-- Create .gitignore for logs and common Python/Django files
-
-Handles:
-- Database integrity errors (duplicate fields)
-- Database connection errors
-- File upload validation (size, type)
-- Date validation (format, past date, reasonable age)
-- Phone number validation (format, length)
-- Address validation (format, length)
-- Customer validation (name, email, national ID)
-- All unexpected exceptions with proper logging
-
-Includes:
-- 10 custom exception classes
-- 8+ validation functions
-- Centralized error handler
-- Logging configuration with rotation
-- Complete documentation with examples
-```
-
-## Notes
-
-- Logs directory will be created automatically when first error is logged
-- All validators provide clear, user-friendly error messages
-- HTTP status codes follow REST conventions
-- Error responses are consistent across all endpoints
-- Production-ready error handling (no stack traces exposed)
