@@ -399,21 +399,6 @@ See [ERROR_HANDLING.md](ERROR_HANDLING.md) for complete error handling documenta
 - **Allowed Extensions**: PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, TXT
 - **Document Types**: NID, TAX_CERTIFICATE, PHOTO, SIGNATURE
 
-## 🧪 Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-python manage.py test
-
-# Run specific test module
-python manage.py test api.tests
-
-# Run with verbose output
-python manage.py test --verbosity=2
-```
-
 ### Manual Testing with curl
 
 See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for comprehensive curl examples.
@@ -509,18 +494,6 @@ chmod -R 755 media/
 docker-compose exec web chmod -R 755 media/
 ```
 
-### Logs Directory Error
-
-**Issue:** `FileNotFoundError: [Errno 2] No such file or directory: '.../logs/api.log'`
-
-**Solution:**
-```bash
-# Create logs directory
-mkdir -p logs
-# In Docker
-docker-compose exec web mkdir -p logs
-```
-
 ## 📊 Database Schema
 
 ### Customer Model
@@ -577,7 +550,7 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 ## 👤 Authors
 
-- Your Name - Initial work
+- MD. RAKIBUL ISLAM
 
 ## 🙏 Acknowledgments
 
