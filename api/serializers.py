@@ -4,9 +4,27 @@ Serializers for Customer Management API.
 Serializers define how Django models are converted to/from JSON representations
 for API requests and responses.
 """
+import logging
 from rest_framework import serializers
 
 from api.models import Customer, Address, Document, PhoneNumber
+from api.validators import (
+    validate_customer_name,
+    validate_email,
+    validate_date_of_birth,
+    validate_national_id,
+    validate_phone_number,
+    validate_postal_code,
+    validate_address_line,
+    validate_file_upload,
+)
+from api.exceptions import (
+    DuplicateEmailError,
+    DuplicateNationalIDError,
+    InvalidInputError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class PhoneNumberSerializer(serializers.ModelSerializer):
@@ -36,6 +54,47 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
         model = PhoneNumber
         fields = ["id", "customer", "phone_type", "number"]
         read_only_fields = ["id", "customer"]
+    
+    def validate_number(self, value):
+        """
+        Validate phone number format.
+        
+        Args:
+            value (str): Phone number to validate
+            
+        Returns:
+            str: Validated phone number
+            
+        Raises:
+            InvalidInputError: If phone number format is invalid
+        """
+        try:
+            validate_phone_number(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid phone number: {value}")
+            raise serializers.ValidationError(str(e.detail))
+    
+    def validate_phone_type(self, value):
+        """
+        Validate phone type choice.
+        
+        Args:
+            value (str): Phone type to validate
+            
+        Returns:
+            str: Validated phone type
+            
+        Raises:
+            ValidationError: If phone type is not a valid choice
+        """
+        valid_types = [choice[0] for choice in PhoneNumber.PhoneType.choices]
+        if value not in valid_types:
+            logger.warning(f"Invalid phone type: {value}")
+            raise serializers.ValidationError(
+                f"Invalid phone type. Must be one of: {', '.join(valid_types)}"
+            )
+        return value
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -86,6 +145,117 @@ class AddressSerializer(serializers.ModelSerializer):
             "country",
         ]
         read_only_fields = ["id", "customer"]
+    
+    def validate_address_line(self, value):
+        """
+        Validate address line format.
+        
+        Args:
+            value (str): Address line to validate
+            
+        Returns:
+            str: Validated address line
+            
+        Raises:
+            ValidationError: If address line is invalid
+        """
+        try:
+            validate_address_line(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid address line: {value}")
+            raise serializers.ValidationError(str(e.detail))
+    
+    def validate_postal_code(self, value):
+        """
+        Validate postal code format.
+        
+        Args:
+            value (str): Postal code to validate
+            
+        Returns:
+            str: Validated postal code
+            
+        Raises:
+            ValidationError: If postal code is invalid
+        """
+        try:
+            validate_postal_code(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid postal code: {value}")
+            raise serializers.ValidationError(str(e.detail))
+    
+    def validate_address_type(self, value):
+        """
+        Validate address type choice.
+        
+        Args:
+            value (str): Address type to validate
+            
+        Returns:
+            str: Validated address type
+            
+        Raises:
+            ValidationError: If address type is not a valid choice
+        """
+        valid_types = [choice[0] for choice in Address.AddressType.choices]
+        if value not in valid_types:
+            logger.warning(f"Invalid address type: {value}")
+            raise serializers.ValidationError(
+                f"Invalid address type. Must be one of: {', '.join(valid_types)}"
+            )
+        return value
+    
+    def validate_city(self, value):
+        """
+        Validate city name.
+        
+        Args:
+            value (str): City name to validate
+            
+        Returns:
+            str: Validated city name
+            
+        Raises:
+            ValidationError: If city name is empty or too long
+        """
+        if not value or len(value.strip()) < 2:
+            logger.warning(f"Invalid city name: {value}")
+            raise serializers.ValidationError(
+                "City name must be at least 2 characters."
+            )
+        if len(value) > 100:
+            logger.warning(f"City name too long: {value}")
+            raise serializers.ValidationError(
+                "City name cannot exceed 100 characters."
+            )
+        return value
+    
+    def validate_district(self, value):
+        """
+        Validate district name.
+        
+        Args:
+            value (str): District name to validate
+            
+        Returns:
+            str: Validated district name
+            
+        Raises:
+            ValidationError: If district name is empty or too long
+        """
+        if not value or len(value.strip()) < 2:
+            logger.warning(f"Invalid district name: {value}")
+            raise serializers.ValidationError(
+                "District name must be at least 2 characters."
+            )
+        if len(value) > 100:
+            logger.warning(f"District name too long: {value}")
+            raise serializers.ValidationError(
+                "District name cannot exceed 100 characters."
+            )
+        return value
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -115,11 +285,54 @@ class DocumentSerializer(serializers.ModelSerializer):
         - POST and PUT requests must use multipart/form-data content type
         - Files are stored in media/customer_documents/ directory
         - uploaded_at is automatically set and cannot be modified
+        - Maximum file size: 10MB
+        - Allowed file types: PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, TXT
     """
     class Meta:
         model = Document
         fields = ["id", "customer", "document_type", "file", "uploaded_at"]
         read_only_fields = ["id", "customer", "uploaded_at"]
+    
+    def validate_file(self, value):
+        """
+        Validate uploaded file for size and type.
+        
+        Args:
+            value (InMemoryUploadedFile): File object to validate
+            
+        Returns:
+            InMemoryUploadedFile: Validated file object
+            
+        Raises:
+            ValidationError: If file validation fails
+        """
+        try:
+            validate_file_upload(value)
+            return value
+        except Exception as e:
+            logger.warning(f"File validation failed: {str(e)}")
+            raise serializers.ValidationError(str(e.detail) if hasattr(e, 'detail') else str(e))
+    
+    def validate_document_type(self, value):
+        """
+        Validate document type choice.
+        
+        Args:
+            value (str): Document type to validate
+            
+        Returns:
+            str: Validated document type
+            
+        Raises:
+            ValidationError: If document type is not a valid choice
+        """
+        valid_types = [choice[0] for choice in Document.DocumentType.choices]
+        if value not in valid_types:
+            logger.warning(f"Invalid document type: {value}")
+            raise serializers.ValidationError(
+                f"Invalid document type. Must be one of: {', '.join(valid_types)}"
+            )
+        return value
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -195,3 +408,83 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = "__all__"
+    
+    def validate_name(self, value):
+        """
+        Validate customer name format.
+        
+        Args:
+            value (str): Customer name to validate
+            
+        Returns:
+            str: Validated customer name
+            
+        Raises:
+            ValidationError: If customer name is invalid
+        """
+        try:
+            validate_customer_name(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid customer name: {value}")
+            raise serializers.ValidationError(str(e.detail))
+    
+    def validate_email(self, value):
+        """
+        Validate email format and uniqueness.
+        
+        Args:
+            value (str): Email address to validate
+            
+        Returns:
+            str: Validated email address
+            
+        Raises:
+            ValidationError: If email format is invalid or already exists
+        """
+        try:
+            validate_email(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid email format: {value}")
+            raise serializers.ValidationError(str(e.detail))
+    
+    def validate_date_of_birth(self, value):
+        """
+        Validate date of birth format and ensure it's in the past.
+        
+        Args:
+            value (date): Date of birth to validate
+            
+        Returns:
+            date: Validated date of birth
+            
+        Raises:
+            ValidationError: If date is invalid or in the future
+        """
+        try:
+            validate_date_of_birth(value)
+            return value
+        except Exception as e:
+            logger.warning(f"Invalid date of birth: {value}")
+            raise serializers.ValidationError(str(e.detail) if hasattr(e, 'detail') else str(e))
+    
+    def validate_national_id_number(self, value):
+        """
+        Validate national ID format.
+        
+        Args:
+            value (str): National ID number to validate
+            
+        Returns:
+            str: Validated national ID number
+            
+        Raises:
+            ValidationError: If national ID is invalid
+        """
+        try:
+            validate_national_id(value)
+            return value
+        except InvalidInputError as e:
+            logger.warning(f"Invalid national ID: {value}")
+            raise serializers.ValidationError(str(e.detail))

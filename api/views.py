@@ -4,8 +4,12 @@ API Views for Customer Management System
 This module contains API endpoints for managing customers and their related data
 including phone numbers, addresses, and documents.
 """
+import logging
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from rest_framework import generics, pagination, parsers
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from api.models import Address, Customer, Document, PhoneNumber
 from api.serializers import (
@@ -14,6 +18,13 @@ from api.serializers import (
 	DocumentSerializer,
 	PhoneNumberSerializer,
 )
+from api.exceptions import (
+	DuplicateEmailError,
+	DuplicateNationalIDError,
+	DatabaseError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class CustomerPagination(pagination.PageNumberPagination):
@@ -158,9 +169,38 @@ class CustomerCreateAPIView(generics.CreateAPIView):
 	Notes:
 		- Email and national_id_number must be unique
 		- All fields are required
+		- Handles IntegrityError for duplicate fields
 	"""
 	serializer_class = CustomerSerializer
 	queryset = Customer.objects.all()
+	
+	def perform_create(self, serializer):
+		"""
+		Create a new customer with error handling.
+		
+		Args:
+			serializer (CustomerSerializer): Validated serializer instance
+			
+		Raises:
+			DuplicateEmailError: If email already exists
+			DuplicateNationalIDError: If national_id_number already exists
+			DatabaseError: If database operation fails
+		"""
+		try:
+			serializer.save()
+		except IntegrityError as e:
+			error_message = str(e)
+			logger.warning(f"Integrity error while creating customer: {error_message}")
+			
+			if "email" in error_message.lower():
+				raise DuplicateEmailError()
+			elif "national_id" in error_message.lower():
+				raise DuplicateNationalIDError()
+			else:
+				raise DatabaseError(detail="Failed to create customer. Duplicate data detected.")
+		except Exception as e:
+			logger.error(f"Error creating customer: {str(e)}", exc_info=True)
+			raise DatabaseError(detail="Failed to create customer. Please try again later.")
 
 
 class CustomerRetrieveAPIView(generics.RetrieveAPIView):
@@ -252,6 +292,34 @@ class CustomerUpdateAPIView(generics.UpdateAPIView):
 	"""
 	serializer_class = CustomerSerializer
 	queryset = Customer.objects.all()
+	
+	def perform_update(self, serializer):
+		"""
+		Update a customer with error handling.
+		
+		Args:
+			serializer (CustomerSerializer): Validated serializer instance
+			
+		Raises:
+			DuplicateEmailError: If email already exists
+			DuplicateNationalIDError: If national_id_number already exists
+			DatabaseError: If database operation fails
+		"""
+		try:
+			serializer.save()
+		except IntegrityError as e:
+			error_message = str(e)
+			logger.warning(f"Integrity error while updating customer: {error_message}")
+			
+			if "email" in error_message.lower():
+				raise DuplicateEmailError()
+			elif "national_id" in error_message.lower():
+				raise DuplicateNationalIDError()
+			else:
+				raise DatabaseError(detail="Failed to update customer. Duplicate data detected.")
+		except Exception as e:
+			logger.error(f"Error updating customer: {str(e)}", exc_info=True)
+			raise DatabaseError(detail="Failed to update customer. Please try again later.")
 
 
 class CustomerDeleteAPIView(generics.DestroyAPIView):
@@ -297,15 +365,59 @@ class CustomerRelatedQuerysetMixin:
 	customer_lookup_url_kwarg = "customer_id"
 
 	def get_customer(self):
-		return get_object_or_404(Customer, pk=self.kwargs[self.customer_lookup_url_kwarg])
+		"""
+		Get the customer object from URL parameters.
+		
+		Returns:
+			Customer: The customer object
+			
+		Raises:
+			Http404: If customer does not exist
+		"""
+		try:
+			return get_object_or_404(Customer, pk=self.kwargs[self.customer_lookup_url_kwarg])
+		except Exception as e:
+			logger.warning(f"Error retrieving customer: {str(e)}")
+			raise
 
 	def filter_by_customer(self, queryset):
+		"""
+		Filter queryset by customer ID from URL.
+		
+		Args:
+			queryset (QuerySet): Base queryset to filter
+			
+		Returns:
+			QuerySet: Filtered queryset for the specific customer
+		"""
 		return queryset.filter(customer_id=self.kwargs[self.customer_lookup_url_kwarg])
 
 	def perform_create(self, serializer):
-		serializer.save(customer=self.get_customer())
+		"""
+		Create related object with error handling.
+		
+		Args:
+			serializer: Validated serializer instance
+			
+		Raises:
+			DatabaseError: If creation fails
+		"""
+		try:
+			serializer.save(customer=self.get_customer())
+		except IntegrityError as e:
+			logger.warning(f"Integrity error while creating related object: {str(e)}")
+			raise DatabaseError(detail="Failed to create resource. Please check your data.")
+		except Exception as e:
+			logger.error(f"Error creating related object: {str(e)}", exc_info=True)
+			raise DatabaseError(detail="Failed to create resource. Please try again later.")
 
 	def get_queryset(self):
+		"""
+		Get queryset filtered by customer.
+		
+		Returns:
+			QuerySet: Filtered queryset for the specified customer
+		"""
 		return self.filter_by_customer(self.queryset)
 
 
