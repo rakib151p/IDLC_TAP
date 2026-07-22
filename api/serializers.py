@@ -212,7 +212,6 @@ class AddressSerializer(serializers.ModelSerializer):
             ValidationError: If city name is empty or too long
         """
         if not value or len(value.strip()) < 2:
-            logger.warning(f"Invalid city name: {value}")
             raise serializers.ValidationError(
                 "City name must be at least 2 characters."
             )
@@ -236,7 +235,6 @@ class AddressSerializer(serializers.ModelSerializer):
             ValidationError: If district name is empty or too long
         """
         if not value or len(value.strip()) < 2:
-            logger.warning(f"Invalid district name: {value}")
             raise serializers.ValidationError(
                 "District name must be at least 2 characters."
             )
@@ -451,7 +449,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             validate_date_of_birth(value)
             return value
         except Exception as e:
-            logger.warning(f"Invalid date of birth: {value}")
+            raise serializers.ValidationError(str(e.detail))
             
     def validate_national_id_number(self, value):
         """
@@ -470,5 +468,5 @@ class CustomerSerializer(serializers.ModelSerializer):
             validate_national_id(value)
             return value
         except InvalidInputError as e:
-            logger.warning(f"Invalid national ID: {value}")
+            raise serializers.ValidationError(str(e.detail))
             
