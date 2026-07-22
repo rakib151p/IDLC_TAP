@@ -89,7 +89,6 @@ def validate_email(value):
         from django.core.validators import validate_email as django_validate_email
         django_validate_email(value)
     except ValidationError:
-        logger.warning(f"Invalid email format: {value}")
         raise InvalidInputError(
             detail="Invalid email format."
         )
@@ -110,7 +109,6 @@ def validate_national_id(value):
         >>> validate_national_id("")  # Raises error
     """
     if not value or len(value) < 5:
-        logger.warning(f"Invalid national ID length: {len(value) if value else 0}")
         raise InvalidInputError(
             detail="National ID must be at least 5 characters."
         )
@@ -151,7 +149,6 @@ def validate_phone_number(value):
     # Must contain at least 7 digits
     digit_count = sum(1 for c in clean_number if c.isdigit())
     if digit_count < 7:
-        logger.warning(f"Phone number has insufficient digits: {value}")
         raise InvalidInputError(
             detail="Phone number must contain at least 7 digits."
         )
